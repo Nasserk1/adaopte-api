@@ -3,7 +3,13 @@ import cors from "cors";
 import pg from "pg";
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: "*",
+  methods: ["GET"],
+  allowedHeaders: ["Content-Type"]
+}));
+
 app.use(express.json());
 
 // Connexion PostgreSQL (Supabase)
@@ -28,7 +34,7 @@ app.get("/animaux", async (req, res) => {
         a.age,
         a.gender,
         a.description,
-        a.imageUrl,
+        a.imageurl AS imageurl,   -- 🔥 CORRECTION ICI
         a.size,
         a.good_with_kids,
         a.good_with_animals,
