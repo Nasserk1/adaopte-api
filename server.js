@@ -18,10 +18,22 @@ const db = await mysql.createPool({
   port: process.env.DB_PORT
 });
 
-// Route API : récupérer les animaux
+// Route : récupérer les animaux
 app.get("/animaux", async (req, res) => {
   try {
     const [rows] = await db.query("SELECT * FROM animaux");
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// Route : SQL générique (utilisée par le frontend)
+app.post("/sql", async (req, res) => {
+  try {
+    const { query, params } = req.body;
+    const [rows] = await db.query(query, params);
     res.json(rows);
   } catch (error) {
     console.error(error);
