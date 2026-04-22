@@ -1,0 +1,8 @@
+# Ne jamais envoyer ces fichiers sensibles
+.env
+
+# Ne jamais envoyer les dépendances
+node_modules/
+
+# Fichiers système
+.DS_Store
