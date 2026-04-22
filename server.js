@@ -27,13 +27,52 @@ async function supabaseQuery(table, options = {}) {
 
 app.get("/animaux", async (req, res) => {
   try {
-    const data = await supabaseQuery("animals");
-    res.json(data);
+    const query = `
+      SELECT 
+        a.id,
+        a.name,
+        a.age,
+        a.gender,
+        a.description,
+        a.imageUrl,
+        a.size,
+        a.good_with_kids,
+        a.good_with_animals,
+        a.arrival_date,
+
+        b.name AS breed,
+        t.name AS type,
+
+        s.name AS shelter,
+        s.address,
+        s.city,
+        s.zip_code,
+        s.phone,
+        s.email,
+
+        m.vaccinated,
+        m.sterilized,
+        m.microshipped,
+        m.last_checkup,
+        m.medical_notes
+
+      FROM animals a
+      JOIN breeds b ON a.breed_id = b.id
+      JOIN types t ON b.type_id = t.id
+      JOIN shelters s ON a.shelter_id = s.id
+      LEFT JOIN medicals_infos m ON a.id = m.animal_id
+      ORDER BY a.id;
+    `;
+
+    const { rows } = await pool.query(query);
+    res.json(rows);
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
+
 
 app.post("/sql", async (req, res) => {
   try {
