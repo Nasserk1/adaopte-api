@@ -1,30 +1,24 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-
-dotenv.config();
+import pg from "pg";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
+// Connexion PostgreSQL (Supabase)
+const pool = new pg.Pool({
+  host: process.env.PGHOST,
+  port: process.env.PGPORT,
+  database: process.env.PGDATABASE,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  ssl: { rejectUnauthorized: false }
+});
 
-async function supabaseQuery(table, options = {}) {
-  let url = `${SUPABASE_URL}/rest/v1/${table}`;
-  if (options.select) url += `?select=${options.select}`;
-  
-  const res = await fetch(url, {
-    headers: {
-      "apikey": SUPABASE_KEY,
-      "Authorization": `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json"
-    }
-  });
-  return res.json();
-}
-
+// ===============================
+// ROUTE PRINCIPALE : /animaux
+// ===============================
 app.get("/animaux", async (req, res) => {
   try {
     const query = `
@@ -68,26 +62,15 @@ app.get("/animaux", async (req, res) => {
     res.json(rows);
 
   } catch (error) {
-    console.error(error);
+    console.error("Erreur API /animaux :", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
-
-app.post("/sql", async (req, res) => {
-  try {
-    const { query } = req.body;
-    const table = query.match(/FROM\s+(\w+)/i)?.[1];
-    if (!table) return res.status(400).json({ error: "Table non trouvée" });
-    const data = await supabaseQuery(table);
-    res.json(data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => {
+// ===============================
+// LANCEMENT DU SERVEUR
+// ===============================
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
   console.log(`API en ligne sur le port ${PORT}`);
 });
