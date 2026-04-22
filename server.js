@@ -1,26 +1,34 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import pkg from "pg";
 
 dotenv.config();
 
-const { Pool } = pkg;
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const db = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-console.log("Connecté à la base de données PostgreSQL");
+async function supabaseQuery(table, options = {}) {
+  let url = `${SUPABASE_URL}/rest/v1/${table}`;
+  if (options.select) url += `?select=${options.select}`;
+  
+  const res = await fetch(url, {
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json"
+    }
+  });
+  return res.json();
+}
 
 app.get("/animaux", async (req, res) => {
   try {
-    const result = await db.query("SELECT * FROM animals");
-    res.json(result.rows);
+    const data = await supabaseQuery("animals");
+    res.json(data);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erreur serveur" });
@@ -29,9 +37,11 @@ app.get("/animaux", async (req, res) => {
 
 app.post("/sql", async (req, res) => {
   try {
-    const { query, params } = req.body;
-    const result = await db.query(query, params);
-    res.json(result.rows);
+    const { query } = req.body;
+    const table = query.match(/FROM\s+(\w+)/i)?.[1];
+    if (!table) return res.status(400).json({ error: "Table non trouvée" });
+    const data = await supabaseQuery(table);
+    res.json(data);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erreur serveur" });
