@@ -1,85 +1,46 @@
-import express from "express";
-import cors from "cors";
-import { Pool } from "pg";
+const express = require('express');
+const { Pool } = require('pg');
+const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
 
-app.use(cors({
-  origin: "*",
-  methods: ["GET"],
-  allowedHeaders: ["Content-Type"]
-}));
-
+// Autorise ton frontend à appeler l'API
+app.use(cors());
 app.use(express.json());
 
-// Connexion PostgreSQL (Supabase)
+const PORT = process.env.PORT || 10000;
+
+// Configuration pour le Pooler (port 6543)
 const pool = new Pool({
-  host: process.env.PGHOST,
-  port: process.env.PGPORT,
-  database: process.env.PGDATABASE,
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  ssl: { rejectUnauthorized: false },
-  statement_timeout: 5000,
-  query_timeout: 5000,
-  connectionTimeoutMillis: 5000
-}); // 👈 FERMETURE OBLIGATOIRE
-
-// ===============================
-// ROUTE PRINCIPALE : /animaux
-// ===============================
-app.get("/animaux", async (req, res) => {
-  try {
-    const query = `
-      SELECT 
-        a.id,
-        a.name,
-        a.age,
-        a.gender,
-        a.description,
-        a.imageurl AS imageurl,
-        a.size,
-        a.good_with_kids,
-        a.good_with_animals,
-        a.arrival_date,
-
-        b.name AS breed,
-        t.name AS type,
-
-        s.name AS shelter,
-        s.address,
-        s.city,
-        s.zip_code,
-        s.phone,
-        s.email,
-
-        m.vaccinated,
-        m.sterilized,
-        m.microchipped,
-        m.last_checkup,
-        m.medical_notes
-
-      FROM animals a
-      JOIN breeds b ON a.breed_id = b.id
-      JOIN types t ON b.type_id = t.id
-      JOIN shelters s ON a.shelter_id = s.id
-      LEFT JOIN medicals_infos m ON a.id = m.animal_id
-      ORDER BY a.id;
-    `;
-
-    const { rows } = await pool.query(query);
-    res.json(rows);
-
-  } catch (error) {
-    console.error("Erreur API /animaux :", error);
-    res.status(500).json({ error: "Erreur serveur" });
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // Indispensable pour Render + Supabase
   }
 });
 
-// ===============================
-// LANCEMENT DU SERVEUR
-// ===============================
-const PORT = process.env.PORT || 10000;
+// Route pour vérifier que la base de données répond
+app.get('/health', async (req, res) => {
+  try {
+    const resDb = await pool.query('SELECT NOW()');
+    res.json({ status: "OK", time: resDb.rows[0] });
+  } catch (err) {
+    res.status(500).json({ status: "Erreur", error: err.message });
+  }
+});
+
+// Ta route principale pour les animaux
+app.get('/animaux', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM animaux');
+    console.log("Animaux récupérés :", result.rows.length);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Erreur SQL détaillée:", err.message);
+    res.status(500).json({ error: "Erreur lors de la récupération des données" });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`API en ligne sur le port ${PORT}`);
+  console.log(`Serveur prêt sur le port ${PORT}`);
 });
