@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import pg from "pg";
+import { Pool } from "pg";
 
 const app = express();
 
@@ -13,14 +13,17 @@ app.use(cors({
 app.use(express.json());
 
 // Connexion PostgreSQL (Supabase)
-const pool = new pg.Pool({
+const pool = new Pool({
   host: process.env.PGHOST,
   port: process.env.PGPORT,
   database: process.env.PGDATABASE,
   user: process.env.PGUSER,
   password: process.env.PGPASSWORD,
-  ssl: { rejectUnauthorized: false }
-});
+  ssl: { rejectUnauthorized: false },
+  statement_timeout: 5000,
+  query_timeout: 5000,
+  connectionTimeoutMillis: 5000
+}); // 👈 FERMETURE OBLIGATOIRE
 
 // ===============================
 // ROUTE PRINCIPALE : /animaux
@@ -34,7 +37,7 @@ app.get("/animaux", async (req, res) => {
         a.age,
         a.gender,
         a.description,
-        a.imageurl AS imageurl,   -- 🔥 CORRECTION ICI
+        a.imageurl AS imageurl,
         a.size,
         a.good_with_kids,
         a.good_with_animals,
