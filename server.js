@@ -1,12 +1,15 @@
-const express = require('express');
-const { Pool } = require('pg');
-const cors = require('cors');
-require('dotenv').config();
+import express from 'express';
+import pkg from 'pg';
+const { Pool } = pkg;
+import cors from 'cors';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 10000;
 
-// Configuration de la connexion à Supabase
+// Configuration de la connexion via le Transaction Pooler (Port 6543)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -17,11 +20,10 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 
-// Route pour récupérer tous les animaux
+// Route principale synchronisée avec tes tables Supabase
 app.get('/animaux', async (req, res) => {
   try {
-    // On utilise "animals" car c'est le nom dans ta base de données
-    // On fait des JOIN pour avoir le nom de la race et du refuge en clair
+    // Requête SQL utilisant le nom de table correct "animals" et les jointures
     const query = `
       SELECT 
         a.*, 
@@ -40,17 +42,15 @@ app.get('/animaux', async (req, res) => {
     `;
     
     const result = await pool.query(query);
-    console.log("Données récupérées avec succès depuis la table animals");
     res.json(result.rows);
   } catch (err) {
-    console.error('Erreur SQL détaillée :', err.message);
-    res.status(500).json({ error: 'Erreur lors de la récupération des données', details: err.message });
+    console.error('Erreur SQL :', err.message);
+    res.status(500).json({ error: 'Erreur de base de données', details: err.message });
   }
 });
 
-// Route de test pour vérifier que le serveur répond
 app.get('/', (req, res) => {
-  res.send('Serveur Adaopte API opérationnel !');
+  res.send('API Adaopte en ligne !');
 });
 
 app.listen(port, () => {
