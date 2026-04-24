@@ -1,12 +1,10 @@
 import express from 'express';
 import cors from 'cors';
-import pkg from 'pg';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'; // Import corrigé ici
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const { Pool } = pkg;
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -14,8 +12,9 @@ const port = process.env.PORT || 3000;
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
+// Sécurité : on vérifie que les clés sont présentes
 if (!supabaseUrl || !supabaseKey) {
-  console.error("ERREUR: Les variables d'environnement Supabase sont manquantes !");
+  console.error("ERREUR : Clés Supabase manquantes dans les variables d'environnement.");
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -23,12 +22,12 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 app.use(cors());
 app.use(express.json());
 
-// Route test
+// Route de base
 app.get('/', (req, res) => {
   res.send('API Adaopte en ligne !');
 });
 
-// Route pour récupérer les animaux
+// Route principale pour les animaux
 app.get('/animaux', async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -42,6 +41,7 @@ app.get('/animaux', async (req, res) => {
 
     if (error) throw error;
 
+    // Formatage des données pour le frontend
     const formattedData = data.map(animal => ({
       ...animal,
       breed: animal.breed?.name || 'Inconnue',
@@ -52,7 +52,7 @@ app.get('/animaux', async (req, res) => {
 
     res.json(formattedData);
   } catch (err) {
-    console.error("Erreur API:", err.message);
+    console.error("Erreur API :", err.message);
     res.status(500).json({ error: 'Erreur lors de la récupération des données' });
   }
 });
