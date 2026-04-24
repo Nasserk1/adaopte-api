@@ -1,58 +1,58 @@
 import express from 'express';
-import pkg from 'pg';
-const { Pool } = pkg;
 import cors from 'cors';
+import pkg from 'pg';
+import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
+const { Pool } = pkg;
 const app = express();
-const port = process.env.PORT || 10000;
+const port = process.env.PORT || 3000;
 
-// Configuration de la connexion via le Transaction Pooler (Port 6543)
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+// Configuration Supabase
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.use(cors());
 app.use(express.json());
 
-// Route principale synchronisée avec tes tables Supabase
-app.get('/animaux', async (req, res) => {
-  try {
-    // Requête SQL utilisant le nom de table correct "animals" et les jointures
-    const query = `
-      SELECT 
-        a.*, 
-        b.name as breed, 
-        t.name as type,
-        s.name as shelter,
-        s.address,
-        s.city,
-        s.zip_code,
-        s.phone,
-        s.email
-      FROM animals a
-      LEFT JOIN breeds b ON a.breed_id = b.id
-      LEFT JOIN types t ON b.type_id = t.id
-      LEFT JOIN shelters s ON a.shelter_id = s.id
-    `;
-    
-    const result = await pool.query(query);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Erreur SQL :', err.message);
-    res.status(500).json({ error: 'Erreur de base de données', details: err.message });
-  }
-});
-
+// Route test
 app.get('/', (req, res) => {
   res.send('API Adaopte en ligne !');
 });
 
+// Route pour récupérer les animaux avec les infos de race et type
+app.get('/animaux', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('animals')
+      .select(`
+        *,
+        breed:breeds(name),
+        type:animal_types(name),
+        shelter:shelters(name, city, address, phone, email)
+      `);
+
+    if (error) throw error;
+
+    // Mise en forme simple pour le frontend
+    const formattedData = data.map(animal => ({
+      ...animal,
+      breed: animal.breed?.name || 'Inconnue',
+      type: animal.type?.name || 'Inconnu',
+      shelter: animal.shelter?.name || 'Refuge inconnu',
+      city: animal.shelter?.city || 'Ville inconnue'
+    }));
+
+    res.json(formattedData);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erreur lors de la récupération des données' });
+  }
+});
+
 app.listen(port, () => {
-  console.log(`Serveur démarré sur le port ${port}`);
+  console.log(`Serveur démarré sur http://localhost:${port}`);
 });
